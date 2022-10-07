@@ -32,8 +32,7 @@ class MX180TP:
         supplySocket.connect((self.SUPPLY_IP, self.SUPPLY_PORT)) # connect socket
         supplySocket.settimeout(TIMEOUT_SECONDS)
         self.supply = supplySocket
-    
-
+        
     def sendCommand(self, msg):
         
         """ Converts the message into the message format for the mx180TP
@@ -41,7 +40,7 @@ class MX180TP:
         Adding a new line '\n' to terminate the message
         Only send the message
         """
-        com_msg =  msg + "\r" + "\n"
+        com_msg =  msg + + "\r" + "\n"
         self.supply.sendall(com_msg.encode("UTF-8"))
         
     def sendAndReceiveCommand(self,msg):
@@ -52,7 +51,7 @@ class MX180TP:
         Send the message and receive also the answer
         """
         BUFFER_SIZE = 256
-        com_msg =  msg + "\r" + "\n"
+        com_msg =  msg + + "\r" + "\n"
         self.supply.write(com_msg.encode("UTF-8"))
         return self.supply.recv(BUFFER_SIZE).decode("UTF-8").rstrip()
     
@@ -126,7 +125,6 @@ class MX180TP:
         output = MX180TP.sendAndReceiveCommand(self, 'OP' + str(nb_output) + '?')
         print('Status Output' + str(nb_output) + ' =', output)
         print('0 "OFF" 1 "ON"\n' )
-
 class LD400P:
     def __init__(self,IP_address,PORT_number):
         """

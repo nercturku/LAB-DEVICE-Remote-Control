@@ -11,124 +11,148 @@
 
 import serial
 import time
+import numpy as np
+class MX180TP_COM:
+    def __init__(self,COM):
+        self.com = COM
 
-def connect(com): #V
-    """ Opens the serial port.
-        \nArguments: COM port (str). Different string depending on the OS used.
-        \nReturns: A COM port object.
-    """
-    source = serial.Serial(com, 19200, 8, parity = 'N', timeout = 1)
-    return source
-
-def sendCommand(source, msg):
-    
-    """ Converts the message into the message format for the mx180TP
-    Adding a semi-colon separator '\r'
-    Adding a new line '\n' to terminate the message
-    Only send the message
-    """
-    com_msg =  msg + + "\r" + "\n"
-    source.write(com_msg.encode("UTF-8"))
-    
-def sendAndReceiveCommand(source,msg):
-    
-    """ Converts the message into the message format for the mx180TP
-    Adding a semi-colon separator '\r'
-    Adding a new line '\n' to terminate the message
-    Send the message and receive also the answer
-    """
-    com_msg =  msg + + "\r" + "\n"
-    source.write(com_msg.encode("UTF-8"))
-    return source.readline().decode("UTF-8")
-
-def idn(com):
-    """ Queries the Power Supply IDN. Prints the instrument identification as a string.
-        \nArguments: COM port (str). Different string depending on the OS used.
-        \nCommand to request IDN --> *IDN?
-    """
-    power_source = connect(com)
-    idn = sendAndReceiveCommand(power_source, '*idn?')
-    print('\nConnected...\nIDN: ', idn, '\n')
-    
-
-
-def settings(com,nb_output):  # V
-    """ Queries the Power Supply settings (Voltage, Current, Output). Prints the settings for OUTPUT1.
-        \nArguments: COM port (str). Different string depending on the OS used.
-        \nCommand to request Voltage --> V<N>?
-        \nCurrent --> I<N>?
-        \nOutput --> OP<N>?
+    def connect(self): #V
+        """ Opens the serial port.
+            \nArguments: COM port (str). Different string depending on the OS used.
+            \nReturns: A COM port object.
+        """
+        self.source = serial.Serial(self.com, 19200, 8, parity = 'N', timeout = 1)
         
-    """
-    power_source = connect(com)
     
-    voltage = sendAndReceiveCommand(power_source, 'V'+str(nb_output)+'?')
-    print('\nVoltage ' + str(nb_output) + ' [V] =', voltage)
-    power_source.write(b'I1?\r\n')
-    current = sendAndReceiveCommand(power_source, 'I'+str(nb_output)+'?')
-    print('Current [A]=', current)
-    power_source.write(b'OP1?\r\n')
-    time.sleep(1)
-    return voltage, current
-
-
-def setup(com,Voltage,Current,nb_output):
-    """ Sets up the Power Supply settings (Voltage, Current). Prints the new settings for OUTPUT1.
-        \nArguments: COM port (str). Different string depending on the OS used.
-        \nCommand to set up Voltage --> V<N> <NRF>
-        \nCurrent --> I<N> <NRF>
-    """
-    power_source = connect(com)
-    V_command = 'V' + str(nb_output) + ' ' + str(Voltage)
-    I_command = 'I' + str(nb_output) + ' ' + str(Current)
-    sendCommand(power_source, V_command)
-    sendCommand(power_source, I_command)
-    time.sleep(3)
-    print("\nNew settings...\n")
-    settings(com)
+    def close(self):
+        self.source.close()
     
-
-
-def output(com, nb_output, output):  # V
-    """ Sets the OUTPUT associated to nb_output on/off.\n
-        \nArguments:\n
-        COM port (str). Different string depending on the OS used\n
-        Output (0 for off, 1 for on)\n
-        \nCommand to set up the output --> OP<N> <NRF>
-        output = 0 or 1
-        nb_ouput = 1, 2 or 3
-    """
-    power_source = connect(com)
-    command = 'OP' + str(nb_output) + ' ' + str(output)
-    sendCommand(power_source, command)
-
-def status_output(com,nb_output):
-    """
-    read the status of the OUTPUT associated to nb_ourput on/off.\n
-        \nArguments:\n
-        COM port (str). Different string depending on the OS used\n
-        Output (0 for off, 1 for on)\n
-        \nCommand to set up the output --> OP<N> <NRF>
-        output = 0 or 1
-        nb_output = 1, 2 or 3
-    """
-    power_source = connect(com)
-    output = sendAndReceiveCommand(power_source, 'OP' + str(nb_output) + '?')
-    print('Status Output' + str(nb_output) + ' =', output)
-    print('0 "OFF" 1 "ON"\n' )
+    def sendCommand(self, msg):
+        
+        """ Converts the message into the message format for the mx180TP
+        Adding a semi-colon separator '\r'
+        Adding a new line '\n' to terminate the message
+        Only send the message
+        """
+        com_msg =  msg + "\r" + "\n"
+        self.source.write(com_msg.encode("UTF-8"))
+        
+    def sendAndReceiveCommand(self,msg):
+        
+        """ Converts the message into the message format for the mx180TP
+        Adding a semi-colon separator '\r'
+        Adding a new line '\n' to terminate the message
+        Send the message and receive also the answer
+        """
+        com_msg =  msg + "\r" + "\n"
+        self.source.write(com_msg.encode("UTF-8"))
+        return self.source.readline().decode("UTF-8")
+    
+    def idn(self):
+        """ Queries the Power Supply IDN. Prints the instrument identification as a string.
+            \nArguments: COM port (str). Different string depending on the OS used.
+            \nCommand to request IDN --> *IDN?
+        """
+        idn = MX180TP_COM.sendAndReceiveCommand(self,'*idn?')
+        print('\nConnected...\nIDN: ', idn, '\n')
+        
+    
+    
+    def settings(self,nb_output):  # V
+        """ Queries the Power Supply settings (Voltage, Current, Output). Prints the settings for OUTPUT1.
+            \nArguments: COM port (str). Different string depending on the OS used.
+            \nCommand to request Voltage --> V<N>?
+            \nCurrent --> I<N>?
+            \nOutput --> OP<N>?
+            
+        """
+        
+        voltage = MX180TP_COM.sendAndReceiveCommand(self,'V'+str(nb_output)+'?')
+        print('\nVoltage ' + str(nb_output) + ' [V] =', voltage)
+        current = MX180TP_COM.sendAndReceiveCommand(self,'I'+str(nb_output)+'?')
+        print('Current [A]=', current)
+        time.sleep(0)
+        return voltage, current
+    
+    
+    def setup(self, Voltage,Current,nb_output):
+        """ Sets up the Power Supply settings (Voltage, Current). Prints the new settings for OUTPUT1.
+            \nArguments: COM port (str). Different string depending on the OS used.
+            \nCommand to set up Voltage --> V<N> <NRF>
+            \nCurrent --> I<N> <NRF>
+        """
+        V_command = 'V' + str(nb_output) + ' ' + str(Voltage)
+        I_command = 'I' + str(nb_output) + ' ' + str(Current)
+        MX180TP_COM.sendCommand(self,V_command)
+        MX180TP_COM.sendCommand(self,I_command)
+        time.sleep(0)
+        print("\nNew settings...\n")
+        MX180TP_COM.settings(self,nb_output)
+        
+    
+    
+    def output(self, nb_output, output):  # V
+        """ Sets the OUTPUT associated to nb_output on/off.\n
+            \nArguments:\n
+            COM port (str). Different string depending on the OS used\n
+            Output (0 for off, 1 for on)\n
+            \nCommand to set up the output --> OP<N> <NRF>
+            output = 0 or 1
+            nb_ouput = 1, 2 or 3
+        """
+        command = 'OP' + str(nb_output) + ' ' + str(output)
+        MX180TP_COM.sendCommand(self, command)
+    
+    def status_output(self,nb_output):
+        """
+        read the status of the OUTPUT associated to nb_ourput on/off.\n
+            \nArguments:\n
+            COM port (str). Different string depending on the OS used\n
+            Output (0 for off, 1 for on)\n
+            \nCommand to set up the output --> OP<N> <NRF>
+            output = 0 or 1
+            nb_output = 1, 2 or 3
+        """
+        output = MX180TP_COM.sendAndReceiveCommand(self, 'OP' + str(nb_output) + '?')
+        print('Status Output' + str(nb_output) + ' =', output)
+        print('0 "OFF" 1 "ON"\n' )
 
 # Laptop assigned COM10 for the Power Supply
 
-COM = "/dev/ttyACM0"
+COM = "COM4"
 
-# Request IDN
-#idn(COM)
+MX180TP_COM_connect=MX180TP_COM(COM)
+# connect device
+MX180TP_COM_connect.connect()
+#Request IDN
+
+MX180TP_COM_connect.idn()
 
 # Request voltage setup in the unit
-#settings(COM)
+MX180TP_COM_connect.settings(1)
 
-# Set up
-#setup(COM)
+# Try Set up
+MX180TP_COM_connect.setup(8,5,2)
+
+V = np.linspace(0,30,100)
+V_0 = V[-1]
+FFI = 0.9
+FFU = 0.8
+
+compteur = 0
+nb_output = 2
+I_sc = 5
+I_0 = I_sc * (1-FFI)**(1/(1-FFU))
+C_AQ = (FFU - 1)/np.log(1-FFI)
+
+while compteur < len(V):
+    time.sleep(1)
+    V_PV = V[compteur]
+    I_PV = I_sc - I_0 * (np.exp(V_PV / (V_0 * C_AQ)) - 1)
+    MX180TP_COM_connect.setup(V_PV, I_PV, nb_output)
+    compteur += 1
+## Disconnect the COM port
+MX180TP_COM_connect.close()
 
 # Set up the unit on/off
 #print('Executed succesfully!')
