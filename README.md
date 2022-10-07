@@ -1,2 +1,2 @@
-# MX180TP Remote Control
- Lab exercise PV simulation
+# Lab Device Remote Control
+Requirement : Python + socket package
