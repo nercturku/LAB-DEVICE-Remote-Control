@@ -90,7 +90,7 @@ def MPPT_LD400P(I_init,load_com,supply_com,dynamic_plot):
     
     ## LD400P into Constant Current mode
 
-    LD400P_connect.set_mode("C")
+    load_com.set_mode("C")
     G = irradiance(compteur)
         
     I_sc_init = I_sc_fct(G,I_sc_stc)
@@ -156,26 +156,54 @@ def MPPT_LD400P(I_init,load_com,supply_com,dynamic_plot):
                 I += dI
         
     ## Switch off the devices and disconnect    
-    LD400P_connect.switch_load(0)
-    MX180TP_connect.output(nb_output,0)
-    MX180TP_connect.Communication.close()
-    LD400P_connect.Communication.close()
+    load_com.switch_load(0)
+    supply_com.output(nb_output,0)
+    load_com.close()
+    supply_com.close()
     
 
 ## Configurate matplotlib
 plt.ion()
-LD400P_mode = mode("192.168.0.49",9221,None)
-MX180TP_mode = mode(None,None,"COM5")
 ## Connect with MX180TP
 
-MX180TP_connect = MX180TP(MX180TP_mode,Communication)
-MX180TP_connect.Communication.connect()
+MX180TP_connect = MX180TP(None,None,"COM5")
+MX180TP_connect.connect()
 
 ## Connect with LD400P
 
-LD400P_connect = LD400P(LD400P_mode,Communication) 
-LD400P_connect.Communication.connect()
+LD400P_connect = LD400P("192.168.0.49",9221,None) 
+LD400P_connect.connect()
 
+V_init = 10
 I_init = 0.3
+#MPPT_LD400P(I_init,LD400P_connect,MX180TP_connect,DynamicUpdate)
 
-MPPT_LD400P(I_init,LD400P_connect,MX180TP_connect,DynamicUpdate)
+## Try with constant voltage mode
+
+## PV info 
+
+V_oc_stc = 30
+FFI = 0.9
+FFU = 0.8
+
+nb_output = 2
+I_sc_stc = 5
+I_0 = I_sc_stc * (1-FFI)**(1/(1-FFU))
+C_AQ = (FFU - 1)/np.log(1-FFI)
+plot = DynamicUpdate(V_oc_stc,I_sc_stc)
+time.sleep(10)
+LD400P_connect.set_mode("V")
+V_PV_init = V_init+ 0.2
+I_supply = (I_sc_stc - I_0 * (np.exp(V_init / (V_oc_stc * C_AQ)) - 1))
+MX180TP_connect.setup(V_PV_init,I_supply,nb_output)
+LD400P_connect.set_level("A",V_init)
+LD400P_connect.switch_load(1)
+time.sleep(10)
+MX180TP_connect.output(nb_output,1)
+
+time.sleep(10)
+## Switch off the devices and disconnect    
+LD400P_connect.switch_load(0)
+MX180TP_connect.output(nb_output,0)
+MX180TP_connect.close()
+LD400P_connect.close()

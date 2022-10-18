@@ -6,7 +6,9 @@ Created on Fri Oct  7 09:34:33 2022
 
 Stack overflow weblink where the main idea come from :
     https://stackoverflow.com/questions/10944621/dynamically-updating-plot-in-matplotlib
-    
+
+Activate dynamic plot on Spyder 
+    --> Tools tabs --> preferences --> Ipython console --> Graphics --> Backend --> Automatic
 """
 import matplotlib.pyplot as plt
 import numpy as np

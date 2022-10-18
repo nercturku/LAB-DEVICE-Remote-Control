@@ -24,18 +24,17 @@ class mode:
     def __init__(self,IP_ADDRESS,PORT_NUMBER,COM):
         if IP_ADDRESS == None:
             self.method = 'USB'
-            self.address = None
-            self.port = COM
+            self.com = COM
         else:
             self.method = 'LAN'
-            self.address = IP_ADDRESS
-            self.port = PORT_NUMBER
+            self.SUPPLY_IP = IP_ADDRESS
+            self.SUPPLY_PORT = PORT_NUMBER
 
-class Communication:
+class Communication(mode):
     """ 
     Communication class for LAN or USB connection with AIMTTI Lab devices
     """
-    def __init__(self,mode):
+    def __init__(self,IP_ADDRESS,PORT_NUMBER,COM):
         
         """
         Parameters
@@ -46,15 +45,8 @@ class Communication:
             PORT : COM (USB) or TCP PORT
         """
         
-        method,address,port = mode.method,mode.address,mode.port
-        self.method = method
-        if self.method == 'LAN':
-            self.SUPPLY_IP = address
-            self.SUPPLY_PORT = port
-        elif self.method == 'USB':
-            self.com = port
-        else:
-            print('Communication protocol not implemented yet')
+        mode.__init__(self, IP_ADDRESS, PORT_NUMBER, COM)
+
     def connect(self):
         """ 
         Connect the computer with the device
@@ -106,24 +98,18 @@ class Communication:
             return self.source.readline().decode("UTF-8")
         
             
-class MX180TP:
+class MX180TP(Communication):
     """
     Contains functions for remote control of MX180TP
     """
-    def __init__(self,mode,Communication):
+    def __init__(self,IP_ADDRESS,PORT_NUMBER,COM):
         """
         Parameters
         ----------
-        mode : Dictionnanry
-            Either USB or LAN communication
-            gather IP_ADDRESS + PORT_Number
-            or the number of the USB port
-        Communication : class
-            Enables the communication according to the chosen mode
         """
         
         ## Give the class communication and all the functions to MX180TP class
-        self.Communication = Communication(mode)        
+        Communication.__init__(self, IP_ADDRESS,PORT_NUMBER,COM)        
 
     
     def idn(self):
@@ -131,7 +117,7 @@ class MX180TP:
             \nArguments: COM port (str). Different string depending on the OS used.
             \nCommand to request IDN --> *IDN?
         """
-        idn = self.Communication.sendAndReceiveCommand('*idn?')
+        idn = self.sendAndReceiveCommand('*idn?')
         print('\nConnected...\nIDN: ', idn, '\n')
         
     
@@ -145,9 +131,9 @@ class MX180TP:
             
         """
         
-        voltage = self.Communication.sendAndReceiveCommand('V'+str(nb_output)+'?')
+        voltage = self.sendAndReceiveCommand('V'+str(nb_output)+'?')
         print('\nVoltage ' + str(nb_output) + ' [V] =', voltage)
-        current = self.Communication.sendAndReceiveCommand('I'+str(nb_output)+'?')
+        current = self.sendAndReceiveCommand('I'+str(nb_output)+'?')
         print('Current ' + str(nb_output) + ' [A]=', current)
         time.sleep(0)
         return voltage, current
@@ -161,8 +147,8 @@ class MX180TP:
         """
         V_command = 'V' + str(nb_output) + ' ' + str(Voltage)
         I_command = 'I' + str(nb_output) + ' ' + str(Current)
-        self.Communication.sendCommand(V_command)
-        self.Communication.sendCommand(I_command)
+        self.sendCommand(V_command)
+        self.sendCommand(I_command)
         time.sleep(0)
         print("\nNew settings...\n")
         voltage,current = self.settings(nb_output)
@@ -179,7 +165,7 @@ class MX180TP:
             nb_ouput = 1, 2 or 3
         """
         command = 'OP' + str(nb_output) + ' ' + str(output)
-        self.Communication.sendCommand(command)
+        self.sendCommand(command)
     
     def status_output(self,nb_output):
         """
@@ -191,7 +177,7 @@ class MX180TP:
             output = 0 or 1
             nb_output = 1, 2 or 3
         """
-        output = self.Communication.sendAndReceiveCommand('OP' + str(nb_output) + '?')
+        output = self.sendAndReceiveCommand('OP' + str(nb_output) + '?')
         print('Status Output' + str(nb_output) + ' =', output)
         print('0 "OFF" 1 "ON"\n' )
     
@@ -200,21 +186,21 @@ class MX180TP:
         Read the measurement (Current and Voltage) of the output nb_output
         Convert string answer into float
         """
-        V_meas = self.Communication.sendAndReceiveCommand("V" + str(nb_output) + "O?")
-        I_meas = self.Communication.sendAndReceiveCommand("I" + str(nb_output) + "O?")
+        V_meas = self.sendAndReceiveCommand("V" + str(nb_output) + "O?")
+        I_meas = self.sendAndReceiveCommand("I" + str(nb_output) + "O?")
         V_meas = float(V_meas[:5])
         I_meas = float(I_meas[:5])
         return V_meas, I_meas
-class LD400P:
+class LD400P(Communication):
     """ 
     Contains functions for remote control of LD400P
     """
-    def __init__(self,mode,Communication):
+    def __init__(self,IP_ADDRESS,PORT_NUMBER,COM):
         """
         Connection with the LD400P through LAN communication
         normally port number should be 9221
         """
-        self.Communication = Communication(mode)
+        Communication.__init__(self,IP_ADDRESS,PORT_NUMBER,COM)
 
     
     def set_mode(self,mode):
@@ -226,13 +212,13 @@ class LD400P:
         G : Constant Conductance
         V : Constant Voltage
         """
-        self.Communication.sendCommand("MODE "+ mode)
+        self.sendCommand("MODE "+ mode)
     
     def switch_load(self,state):
         """
         State : 0 (Off) or 1 (On) to switch on/off the load
         """
-        self.Communication.sendCommand("INP " + str(state))
+        self.sendCommand("INP " + str(state))
         
     def set600W(self,state):
         """
@@ -243,27 +229,27 @@ class LD400P:
         state : 0 or 1
             Off or On
         """
-        self.Communication.sendCommand("600W " + str(state))
+        self.sendCommand("600W " + str(state))
         
     def set_level(self,channel,value):
-        self.Communication.sendCommand(channel + " " + str(value))
+        self.sendCommand(channel + " " + str(value))
         
     def query_level(self,channel):
-        query = self.Communication.sendAndReceiveCommand(channel + "?")
+        query = self.sendAndReceiveCommand(channel + "?")
         return query
     
     def I_V_query(self):
-        I = self.Communication.sendAndReceiveCommand("I?")
-        V = self.Communication.sendAndReceiveCommand("V?")
+        I = self.sendAndReceiveCommand("I?")
+        V = self.sendAndReceiveCommand("V?")
         return I,V
 
     def set_limit(self,I_lim,V_lim):
-        self.Communication.sendCommand("ILIM "+str(I_lim))
-        self.Communication.sendCommand("VLIM "+str(V_lim))
+        self.sendCommand("ILIM "+str(I_lim))
+        self.sendCommand("VLIM "+str(V_lim))
     
     def query_limit(self):
-        I_lim = self.Communication.sendAndReceiveCommand("ILIM?")
-        V_lim = self.Communication.sendAndReceiveCommand("VLIM?")
+        I_lim = self.sendAndReceiveCommand("ILIM?")
+        V_lim = self.sendAndReceiveCommand("VLIM?")
         return I_lim,V_lim
 
 
