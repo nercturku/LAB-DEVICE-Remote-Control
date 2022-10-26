@@ -1,20 +1,16 @@
-# MX180TP Tripe Output Multi-Range DC Power Supply Controller
 # Tested with Python 3.7.9 64-bit
 # 15-MAR-22 Hugo Huerta
-# SEP-22 Maximilien Marc --> adding PV functionnality
+# SEP-22 Maximilien Marc --> ADD Class for communication
+# 4 class mode, Communication, MX180TP, LD400P
+# mode --> either LAN or USB 
+# Communication --> connect, disconnect, send and revices command with devices
+# MX180TP --> functions related with power supply
+# LD400P --> functions related with DC Load
 
-# Few functions are available to control the MX180TP unit, for instance:
-# Connection by using serial
-# ID request
-# Voltage and Current set up
-# Output control ON/OFF
-
-import serial
-import socket
+import serial # USB Com
+import socket # Lan Com
 import time
-import numpy as np
-import matplotlib.pyplot as plt
-from dynamic_plot_LAB import DynamicUpdate 
+
 
 class mode:
     """
@@ -191,6 +187,7 @@ class MX180TP(Communication):
         V_meas = float(V_meas[:5])
         I_meas = float(I_meas[:5])
         return V_meas, I_meas
+
 class LD400P(Communication):
     """ 
     Contains functions for remote control of LD400P
@@ -202,6 +199,13 @@ class LD400P(Communication):
         """
         Communication.__init__(self,IP_ADDRESS,PORT_NUMBER,COM)
 
+    def idn(self):
+        """ Queries the Load IDN. Prints the instrument identification as a string.
+            \nArguments: COM port (str). Different string depending on the OS used.
+            \nCommand to request IDN --> *IDN?
+        """
+        idn = self.sendAndReceiveCommand('*idn?')
+        print('\nConnected...\nIDN: ', idn, '\n')
     
     def set_mode(self,mode):
         """
@@ -252,65 +256,3 @@ class LD400P(Communication):
         V_lim = self.sendAndReceiveCommand("VLIM?")
         return I_lim,V_lim
 
-
-if __name__ == '__main__':
-    
-    # Configurate matplotlib for dynamic plotting
-    
-    plt.ion()
-    
-    # Laptop assigned COM10 for the Power Supply
-    
-    COM = "COM5"
-    mode_MX180TP = mode(None,None,COM)
-    
-    MX180TP_connect=MX180TP(mode_MX180TP,Communication)
-    # connect device
-    MX180TP_connect.Communication.connect()
-    #Request IDN
-    
-    MX180TP_connect.idn()
-    
-    # Request voltage setup in the unit
-    MX180TP_connect.settings(1)
-    MX180TP_connect.output(1, 0)
-    # Try Set up
-    
-    MX180TP_connect.setup(8.5,5,2)
-    MX180TP_connect.output(2, 1)
-    
-    # Pause 20 seconds the time it is set
-    
-    time.sleep(80)
-    MX180TP_connect.output(2, 0)
-    
-    # PV settings
-    
-    V = np.linspace(0,30,100)
-    V_0 = V[-1]
-    FFI = 0.9
-    FFU = 0.8
-    
-    compteur = 0
-    nb_output = 2
-    I_sc = 5
-    I_0 = I_sc * (1-FFI)**(1/(1-FFU))
-    C_AQ = (FFU - 1)/np.log(1-FFI)
-    plot = DynamicUpdate(V_0,I_sc)
-    
-    ## Pause the time the GUI is setting up
-    
-    time.sleep(10)
-    
-    while compteur < len(V):
-        time.sleep(1)
-        V_PV = V[compteur]
-        I_PV = I_sc - I_0 * (np.exp(V_PV / (V_0 * C_AQ)) - 1)
-        MX180TP_connect.setup(V_PV, I_PV, nb_output)
-        x,y,P = plot.add_point(V_PV,I_PV)
-        compteur += 1
-    # Disconnect the COM port
-    MX180TP_connect.Communication.close()
-    
-    # Set up the unit on/off
-    #print('Executed succesfully!')

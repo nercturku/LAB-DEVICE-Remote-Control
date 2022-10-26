@@ -1,13 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Oct 10 16:26:11 2022
-
-@author: Maximilien
-
-TEST Continiuous with the LD400P Load if supply gives according to settings
-
-MPPT Trial
-
+Exercice Develop MPPT Algorithm with LD400P + MX180TP setup
+Static Efficiency
+Dynamic Efficiency
 """
 
 ## IMPORT
@@ -15,16 +10,22 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 from dynamic_plot_LAB import DynamicUpdate
-from mx180TP import mode,Communication,MX180TP, LD400P
+from LAB_device_class import MX180TP, LD400P
 
 
-def MPPT_LD400P(I_init,load_com,supply_com,dynamic_plot):
+def MPPT_efficiency(I_init,load_com,supply_com,dynamic_plot,MPPT_function,mode,minute = 7):
     """
     Performs MPPT between a LD400P DC load and a MX180TP DC supply
     
+    INPUTS : 
     load_com is the objected connected with LD400P
     supply_com is the object connected with MX180TP
     
+    MPPT_function is the MPPT function to command the LD400P
+    mode : string 'static' or 'dynamic'
+    minute : number of minutes
+    OUTPUTS:
+    eff : efficiency P_meas_MPPT/P_MPP_PV
     """
     def I_sc_fct(G,I_sc_stc):
         """
@@ -52,24 +53,27 @@ def MPPT_LD400P(I_init,load_com,supply_com,dynamic_plot):
         """
         return V_oc_stc * (np.log(1 + G/CG)*CV - CR * G)
     
-    def irradiance(compteur):
+    def irradiance(count,mode,minute):
         """
-        Compute irradiance [W/m²] according to the counter
+        Compute irradiance [W/m²] according to the counter and the simulation mode
         """
-        slope = (1000 - 300)/120
-        sec = compteur %(7*60)
-        if sec < 60:
-            G = 300
-        elif sec < 180:
-            t = sec - 60 
-            G = 300 + slope * t
-        elif sec < 240:
+        if mode == 'dynamic':
+            slope = (1000 - 300)/(120 * minute / 7)
+            sec = count %(minute*60)
+            if sec < 60 * minute/7:
+                G = 300
+            elif sec < 60 * minute * 3 / 7:
+                t = sec - 60 * minute /7 
+                G = 300 + slope * t
+            elif sec < 60 * minute * 4/7:
+                G = 1000
+            elif sec < 60 * minute * 6/7:
+                t = sec - 60 * minute * 4/7
+                G = 1000 - slope * t
+            elif sec < 60 * minute:
+                G = 300
+        elif mode == 'static':
             G = 1000
-        elif sec < 360:
-            t = sec - 240
-            G = 1000 - slope * t
-        elif sec < 420:
-            G = 300
         return G
     
     ## PV info 
@@ -84,14 +88,14 @@ def MPPT_LD400P(I_init,load_com,supply_com,dynamic_plot):
     C_AQ = (FFU - 1)/np.log(1-FFI)
     plot = dynamic_plot(V_oc_stc,I_sc_stc)
     time.sleep(10)
-    compteur = 0
+    count = 0
     
     ## Set up MX180TP + LD400P at initial conditions
     
     ## LD400P into Constant Current mode
 
     load_com.set_mode("C")
-    G = irradiance(compteur)
+    G = irradiance(count,mode,minute)
         
     I_sc_init = I_sc_fct(G,I_sc_stc)
     V_oc_init = V_oc_fct(G,V_oc_stc)
@@ -112,98 +116,90 @@ def MPPT_LD400P(I_init,load_com,supply_com,dynamic_plot):
     P_meas_init = V_meas_init * I_meas_init
     
     I = I_init
-    dI = 0.05
-    while compteur < 2 * 7 * 60:
-        G = irradiance(compteur)
+    I_step = 0.05
+
+    ## Initilize eff list
+    eff = [] 
+    
+    while count < minute * 60: 
+        
+        G = irradiance(count,mode,minute)
         
         I_sc = I_sc_fct(G,I_sc_stc)
         V_oc = V_oc_fct(G,V_oc_stc)
         V_PV_array = np.linspace(0,V_oc,100)
         I_PV_array = (I_sc - I_0 * (np.exp(V_PV_array / (V_oc * C_AQ)) - 1)) - 0.1
-        compteur += 1 
-        time.sleep(0.5)
-        V_meas_init, I_meas_init = supply_com.get_measurements(nb_output)
-        P_meas_init = V_meas_init * I_meas_init
+        count += 1 
         
-        ## Display it
-        x,y,P = plot.add_point(V_meas_init,I_meas_init,V_PV_array,I_PV_array)
-        
-        if compteur == 1:
-            if I + dI > I_sc:
-                I -= dI
-            else:
-                I += dI 
-    
+        ## Display it --> on figure
+        x,y,P,P_PV_array = plot.add_point(V_meas_init,I_meas_init,V_PV_array,I_PV_array)
+        eff.append(P_meas_init/max(P_PV_array))
+
+        ## Setting UP the Load and the Power Supply
+
         load_com.set_level("A",I) 
-        I_supply = I + 0.1
-        V_PV = V_oc * C_AQ * np.log(1 - (I_supply - I_sc)/I_0)
+        I_supply = I + 0.1 # Add 0.1 to have the settings current of the power supply higher than the one of the load
+        V_PV = V_oc * C_AQ * np.log(1 - (I_supply - I_sc)/I_0) # PV voltage accoridng to current
         
         
         supply_com.setup(V_PV,I_supply,nb_output)
-        time.sleep(0.5)
+        time.sleep(1)
+
+        ## Get measurements
         V_meas_new, I_meas_new = supply_com.get_measurements(nb_output)
         P_meas_new = V_meas_new * I_meas_new
         
-        if P_meas_new > P_meas_init:
-            if I_meas_new > I_meas_init:
-                I += dI
-            else:
-                I -= dI
-        else:
-            if I_meas_new > I_meas_init:
-                I -= dI
-            else:
-                I += dI
+        ## Performs MPPT --> To be completed
+
+        output = MPPT_function()
+
+        ## Store Old Measurement
+        P_meas_init,I_meas_init,V_meas_init = P_meas_new,I_meas_new,V_meas_new
+
+        
+        
         
     ## Switch off the devices and disconnect    
     load_com.switch_load(0)
     supply_com.output(nb_output,0)
     load_com.close()
     supply_com.close()
-    
+    return eff
 
-## Configurate matplotlib
+def MPPT_function():
+    """
+    Performs MPPT by controlling the LD400P
+    1) Perturb & Observ Algorithm
+    2) Incremental Conductance Method --> To be tested
+    """  
+    return None
+
+
+## Configurate matplotlib for dynamic plots
 plt.ion()
+
 ## Connect with MX180TP
 
-MX180TP_connect = MX180TP(None,None,"COM5")
-MX180TP_connect.connect()
+MX180TP_object = MX180TP(None,None,"COM6")
+MX180TP_object.connect()
 
 ## Connect with LD400P
 
-LD400P_connect = LD400P("192.168.0.49",9221,None) 
-LD400P_connect.connect()
+LD400P_object = LD400P(None,None,"COM7") 
+LD400P_object.connect()
 
-V_init = 10
+
+## initial current for the PowerSupply
 I_init = 0.3
-#MPPT_LD400P(I_init,LD400P_connect,MX180TP_connect,DynamicUpdate)
 
-## Try with constant voltage mode
+## Simulation mode
+mode = 'static' # either static or dynamic
 
-## PV info 
+eff = MPPT_efficiency(I_init,LD400P_object,MX180TP_object,DynamicUpdate,MPPT_function,mode,minute = 1) # MPPT Efficiency
 
-V_oc_stc = 30
-FFI = 0.9
-FFU = 0.8
-
-nb_output = 2
-I_sc_stc = 5
-I_0 = I_sc_stc * (1-FFI)**(1/(1-FFU))
-C_AQ = (FFU - 1)/np.log(1-FFI)
-plot = DynamicUpdate(V_oc_stc,I_sc_stc)
-time.sleep(10)
-LD400P_connect.set_mode("V")
-V_PV_init = V_init+ 0.2
-I_supply = (I_sc_stc - I_0 * (np.exp(V_init / (V_oc_stc * C_AQ)) - 1))
-MX180TP_connect.setup(V_PV_init,I_supply,nb_output)
-LD400P_connect.set_level("A",V_init)
-LD400P_connect.switch_load(1)
-time.sleep(10)
-MX180TP_connect.output(nb_output,1)
-
-time.sleep(10)
-## Switch off the devices and disconnect    
-LD400P_connect.switch_load(0)
-MX180TP_connect.output(nb_output,0)
-MX180TP_connect.close()
-LD400P_connect.close()
+new_fig, ax = plt.subplots()
+ax.plot([i for i in range(len(eff))],eff)
+ax.set_ylabel('MPPT Efficiency')
+ax.set_xlabel('Time (s)')
+ax.set_ylim([0,1])
+plt.show()

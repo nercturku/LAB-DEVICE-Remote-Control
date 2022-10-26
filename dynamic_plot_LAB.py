@@ -84,7 +84,7 @@ class DynamicUpdate:
         self.ax_2.legend((self.lines_2,self.lines_2_P),('current','power'))
         plt.tight_layout()
         
-    def on_running(self, xdata, ydata, Pdata, V_PV_array, I_PV_array):
+    def on_running(self, xdata, ydata, Pdata, V_PV_array, I_PV_array,P_PV_array):
         
         ## Former points are plot
         if len(xdata)>1:
@@ -126,9 +126,7 @@ class DynamicUpdate:
         
         self.lines_2, = self.ax_2.plot(V_PV_array, I_PV_array, '-',color = 'blue')
         
-        P_PV_array = []
-        for k in range(len(V_PV_array)):
-            P_PV_array.append(V_PV_array[k] * I_PV_array[k])
+
         self.lines_2_P, = self.ax_2_P.plot(V_PV_array, P_PV_array, '-', color = 'red')
         
         # We need to draw *and* flush on second plot
@@ -156,6 +154,10 @@ class DynamicUpdate:
         self.x_data.append(x)
         self.y_data.append(y)
         self.P_data.append(x*y)
-        self.on_running(self.x_data, self.y_data,self.P_data,V_PV_array,I_PV_array)
+        P_PV_array = []
+        for k in range(len(V_PV_array)):
+            P_PV_array.append(V_PV_array[k] * I_PV_array[k])
+        self.on_running(self.x_data, self.y_data,self.P_data,
+                        V_PV_array,I_PV_array,P_PV_array)
         
-        return self.x_data, self.y_data,self.P_data
+        return self.x_data, self.y_data,self.P_data,P_PV_array
