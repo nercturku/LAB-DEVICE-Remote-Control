@@ -151,7 +151,8 @@ def MPPT_efficiency(I_init,load_com,supply_com,dynamic_plot,MPPT_function,mode,m
         
         ## Performs MPPT --> To be completed
 
-        I = MPPT_function(I,I_step,P_meas_new,P_meas_init,I_meas_new,I_meas_init)
+        I = MPPT_function(I,I_step,P_meas_new,P_meas_init,I_meas_new,I_meas_init,
+                          V_meas_new, V_meas_init)
 
         ## Store Old Measurement
         P_meas_init,I_meas_init,V_meas_init = P_meas_new,I_meas_new,V_meas_new
@@ -166,24 +167,46 @@ def MPPT_efficiency(I_init,load_com,supply_com,dynamic_plot,MPPT_function,mode,m
     supply_com.close()
     return eff
 
-def MPPT_function(I,I_step,P_meas_new,P_meas_init,I_meas_new,I_meas_init):
+def MPPT_function(I,I_step,P_meas_new,P_meas_init,I_meas_new,I_meas_init,
+                  V_meas_new,V_meas_init,
+                  MPPT_mode = 'P&O'):
     """
     Performs MPPT by controlling the LD400P
     1) Perturb & Observ Algorithm 
     LD400P : Constant Current Load
     MX180TP Power supply : Constant Voltage Power Supply
+    2) Incremental Conductance
     """  
-
-    if P_meas_new > P_meas_init:
-            if I_meas_new > I_meas_init:
-                I += I_step
-            else:
-                I -= I_step
-    else:
-        if I_meas_new > I_meas_init:
-            I -= I_step
+    if MPPT_mode == "P&O":
+        if P_meas_new > P_meas_init:
+                if I_meas_new > I_meas_init:
+                    I += I_step
+                else:
+                    I -= I_step
         else:
-            I += I_step
+            if I_meas_new > I_meas_init:
+                I -= I_step
+            else:
+                I += I_step
+    elif MPPT_mode == "INC":
+        if I_meas_new - I_meas_init == 0:
+            if V_meas_new == V_meas_init == 0:
+                pass
+            else:
+                if I_meas_new > I_meas_init:
+                    I += I_step
+                else:
+                    I -= I_step
+        else:
+            dI = I_meas_new - I_meas_init
+            dV = V_meas_new - V_meas_init
+            if dI/dV == - I_meas_new/V_meas_new:
+                pass
+            else:
+                if dI/dV > -I_meas_new/V_meas_new:
+                    I += I_step
+                else:
+                    I -= I_step
     return I
 
 
@@ -205,8 +228,8 @@ LD400P_object.connect()
 I_init = 0.3
 
 ## Simulation mode
-mode = 'dynamic' # either static or dynamic
-
+mode = 'static' # either static or dynamic
+MPPT_mode = 'INC' # either INC or P&O
 eff = MPPT_efficiency(I_init,LD400P_object,MX180TP_object,DynamicUpdate,MPPT_function,mode,minute = 2) # Dynamic MPPT Efficiency
 
 new_fig, ax = plt.subplots()

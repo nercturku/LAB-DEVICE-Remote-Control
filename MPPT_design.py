@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from dynamic_plot_LAB import DynamicUpdate
 from LAB_device_class import MX180TP, LD400P
+from helloworld import COM_PORT_MX180TP,COM_PORT_LD400P
 
 
 def MPPT_efficiency(I_init,load_com,supply_com,dynamic_plot,MPPT_function,mode,minute = 7):
@@ -180,12 +181,12 @@ plt.ion()
 
 ## Connect with MX180TP
 
-MX180TP_object = MX180TP(None,None,"COM6")
+MX180TP_object = MX180TP(None,None,COM_PORT_MX180TP)
 MX180TP_object.connect()
 
 ## Connect with LD400P
 
-LD400P_object = LD400P(None,None,"COM7") 
+LD400P_object = LD400P(None,None,COM_PORT_LD400P) 
 LD400P_object.connect()
 
 
