@@ -117,7 +117,6 @@ def MPPT_efficiency(I_init,load_com,supply_com,dynamic_plot,MPPT_function,mode,m
     P_meas_init = V_meas_init * I_meas_init
     
     I = I_init
-    I_step = 0.05
 
     ## Initilize eff list
     eff = [] 
