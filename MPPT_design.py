@@ -127,7 +127,7 @@ def MPPT_efficiency(I_init,load_com,supply_com,dynamic_plot,MPPT_function,mode,m
         
         I_sc = I_sc_fct(G,I_sc_stc)
         V_oc = V_oc_fct(G,V_oc_stc)
-        V_PV_array = np.linspace(0,V_oc,100)
+        V_PV_array = np.linspace(0,V_oc,1000)
         I_PV_array = (I_sc - I_0 * (np.exp(V_PV_array / (V_oc * C_AQ)) - 1)) - 0.1
         count += 1 
         
@@ -201,5 +201,5 @@ new_fig, ax = plt.subplots()
 ax.plot([i for i in range(len(eff))],eff)
 ax.set_ylabel('MPPT Efficiency')
 ax.set_xlabel('Time (s)')
-ax.set_ylim([0,1])
+ax.set_ylim([0,1.1])
 plt.show()
