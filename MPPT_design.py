@@ -193,8 +193,8 @@ I_init = 0.3
 
 ## Simulation mode
 mode = 'static' # either static or dynamic
-
-eff = MPPT_efficiency(I_init,LD400P_object,MX180TP_object,DynamicUpdate,MPPT_function,mode,minute = 1) # MPPT Efficiency
+minute = 1
+eff = MPPT_efficiency(I_init,LD400P_object,MX180TP_object,DynamicUpdate,MPPT_function,mode,minute) # MPPT Efficiency
 
 new_fig, ax = plt.subplots()
 ax.plot([i for i in range(len(eff))],eff)

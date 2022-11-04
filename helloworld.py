@@ -7,6 +7,7 @@ if __name__ == '__main__':
     
     MX180TP_object = MX180TP() ## get the object
     MX180TP_object.connect()
+        
     
     ## Connect with LD400P
     

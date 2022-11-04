@@ -12,9 +12,10 @@ import socket # Lan Com
 import time
 import serial.tools.list_ports # List ports connected to computer
 import os
+from sys import exit
 
 class mode:
-    """arp -a
+    """
     Defines the protocol of communication (either USB or LAN at the moment)
     Defines the communication settings 
     """
@@ -22,14 +23,16 @@ class mode:
         PID = self.PID
         name = self.name
         try:
-            try:
-                ## Try to find the USB COM ports associated with PID
-                for serial_object in serial.tools.list_ports.comports():
-                    if serial_object.pid == PID:
-                        COM = serial_object.device
-                self.method = 'USB'
-                self.com = COM
-            except:
+            USB = False
+            ## Try to find the USB COM ports associated with PID
+            for serial_object in serial.tools.list_ports.comports():
+                if serial_object.pid == PID:
+                    COM = serial_object.device
+                    self.method = 'USB'
+                    self.com = COM
+                    USB = True
+            if not USB:
+                LAN = False
                 ## Supply port of aim-TTI
                 self.SUPPLY_PORT = 9221
                 ## Try to connect with IP address associated with the PID
@@ -70,18 +73,22 @@ class mode:
                                 ## store IP + connection method
                                 self.SUPPLY_IP = IP_ADDRESS
                                 self.method = 'LAN'
+                                LAN = True
                                 supplySocket.close()
                             else:
                                 supplySocket.close()
                         except:
                             pass
+                            
                         
                     except:
                         pass
-                
+                if USB == False and LAN == False:
+                    raise Exception('No connection')
+                        
         except:
-            print('neither USB nor LAN communication connected')
-            print('')
+            exit('neither USB nor LAN connected')
+        
 
 class Communication(mode):
     """ 
@@ -116,6 +123,7 @@ class Communication(mode):
         
         elif self.method == 'USB':
             self.source = serial.Serial(self.com,19200, 8, parity = 'N', timeout = 1)
+        
     
     def close(self):
         """
