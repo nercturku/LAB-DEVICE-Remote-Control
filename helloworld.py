@@ -1,18 +1,16 @@
 from LAB_device_class import MX180TP,LD400P
 import time
-COM_PORT_MX180TP = "COM6"
-COM_PORT_LD400P = "COM7"
 
 
 if __name__ == '__main__':
     ## Connect with MX180TP
     
-    MX180TP_object = MX180TP(None,None,COM_PORT_MX180TP) ## get the object
+    MX180TP_object = MX180TP() ## get the object
     MX180TP_object.connect()
     
     ## Connect with LD400P
     
-    LD400P_object = LD400P(None,None,COM_PORT_LD400P) ## get the object
+    LD400P_object = LD400P() ## get the object
     LD400P_object.connect()
     
     ## Ask for identification

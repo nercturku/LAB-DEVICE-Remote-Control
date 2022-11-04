@@ -10,27 +10,84 @@
 import serial # USB Com
 import socket # Lan Com
 import time
-
+import serial.tools.list_ports # List ports connected to computer
+import os
 
 class mode:
-    """
+    """arp -a
     Defines the protocol of communication (either USB or LAN at the moment)
     Defines the communication settings 
     """
-    def __init__(self,IP_ADDRESS,PORT_NUMBER,COM):
-        if IP_ADDRESS == None:
-            self.method = 'USB'
-            self.com = COM
-        else:
-            self.method = 'LAN'
-            self.SUPPLY_IP = IP_ADDRESS
-            self.SUPPLY_PORT = PORT_NUMBER
+    def __init__(self):
+        PID = self.PID
+        name = self.name
+        try:
+            try:
+                ## Try to find the USB COM ports associated with PID
+                for serial_object in serial.tools.list_ports.comports():
+                    if serial_object.pid == PID:
+                        COM = serial_object.device
+                self.method = 'USB'
+                self.com = COM
+            except:
+                ## Supply port of aim-TTI
+                self.SUPPLY_PORT = 9221
+                ## Try to connect with IP address associated with the PID
+                devices = []
+                for device in os.popen('arp -a'):
+                    devices.append(device)
+                
+                
+                List_IP_address = []
+                for device in devices:
+                    try:
+                        
+                        int(device[2])
+                        IP_ADDRESS = device[2:17]
+                        
+                        loop = True
+                        while loop:
+                            if IP_ADDRESS[-1] == " ":
+                                IP_ADDRESS = IP_ADDRESS[:-1]
+                            else:
+                                loop = False
+                        List_IP_address.append(IP_ADDRESS)
+                        
+                        ## Try to connect with IP address on supply port
+                        try:
+                            TIMEOUT_SECONDS = 0.01
+                            ## Creating socket  to connect with the supply port
+                            supplySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) # set up socket
+                            supplySocket.connect((IP_ADDRESS, self.SUPPLY_PORT)) # connect socket
+                            supplySocket.settimeout(TIMEOUT_SECONDS)
+                            ## Ask for identification for the item
+                            idn_str = '*idn?' + '\r' + '\n'
+                            supplySocket.sendall(idn_str.encode("UTF-8"))
+                            idn_answer = supplySocket.recv(256).decode("UTF-8").rstrip()
+                
+                            if name in idn_answer:
+                                ## if name in identification --> good items
+                                ## store IP + connection method
+                                self.SUPPLY_IP = IP_ADDRESS
+                                self.method = 'LAN'
+                                supplySocket.close()
+                            else:
+                                supplySocket.close()
+                        except:
+                            pass
+                        
+                    except:
+                        pass
+                
+        except:
+            print('neither USB nor LAN communication connected')
+            print('')
 
 class Communication(mode):
     """ 
     Communication class for LAN or USB connection with AIMTTI Lab devices
     """
-    def __init__(self,IP_ADDRESS,PORT_NUMBER,COM):
+    def __init__(self):
         
         """
         Parameters
@@ -41,7 +98,7 @@ class Communication(mode):
             PORT : COM (USB) or TCP PORT
         """
         
-        mode.__init__(self, IP_ADDRESS, PORT_NUMBER, COM)
+        mode.__init__(self)
 
     def connect(self):
         """ 
@@ -98,14 +155,16 @@ class MX180TP(Communication):
     """
     Contains functions for remote control of MX180TP
     """
-    def __init__(self,IP_ADDRESS,PORT_NUMBER,COM):
+    def __init__(self):
         """
         Parameters
         ----------
         """
         
         ## Give the class communication and all the functions to MX180TP class
-        Communication.__init__(self, IP_ADDRESS,PORT_NUMBER,COM)        
+        self.PID = 1210
+        self.name = "MX180TP"
+        Communication.__init__(self)        
 
     
     def idn(self):
@@ -192,12 +251,14 @@ class LD400P(Communication):
     """ 
     Contains functions for remote control of LD400P
     """
-    def __init__(self,IP_ADDRESS,PORT_NUMBER,COM):
+    def __init__(self):
         """
         Connection with the LD400P through LAN communication
         normally port number should be 9221
         """
-        Communication.__init__(self,IP_ADDRESS,PORT_NUMBER,COM)
+        self.PID = 1200
+        self.name = 'LD400P'
+        Communication.__init__(self)
 
     def idn(self):
         """ Queries the Load IDN. Prints the instrument identification as a string.
@@ -256,3 +317,14 @@ class LD400P(Communication):
         V_lim = self.sendAndReceiveCommand("VLIM?")
         return I_lim,V_lim
 
+if __name__ == '__main__':
+    MX180TP_object = MX180TP()
+    MX180TP_object.connect()
+    MX180TP_object.idn()
+    print(MX180TP_object.method)
+    MX180TP_object.close()
+    LD400P_object = LD400P()
+    LD400P_object.connect()
+    LD400P_object.idn()
+    print(LD400P_object.method)
+    LD400P_object.close()
