@@ -84,10 +84,10 @@ class mode:
                     except:
                         pass
                 if USB == False and LAN == False:
-                    raise Exception('No connection')
+                    raise Exception(name + ' No connection')
                         
         except:
-            exit('neither USB nor LAN connected')
+            exit(name + ' neither USB nor LAN connected')
         
 
 class Communication(mode):
