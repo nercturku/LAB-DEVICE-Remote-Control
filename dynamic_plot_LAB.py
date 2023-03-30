@@ -24,11 +24,14 @@ class DynamicUpdate:
     x_data = []
     y_data = []
     P_data = []
+    eff_data = []
+    irr_data = []
     
-    def __init__(self,max_x,max_y):
+    def __init__(self,max_x,max_y, minute):
         
         self.max_x = max_x + 5
         self.max_y = max_y + 1
+        self.minute = minute
         self.on_launch()
         
     def on_launch(self):
@@ -84,7 +87,25 @@ class DynamicUpdate:
         self.ax_2.legend((self.lines_2,self.lines_2_P),('current','power'))
         plt.tight_layout()
         
-    def on_running(self, xdata, ydata, Pdata, V_PV_array, I_PV_array,P_PV_array):
+        ## Set up the second Figure with the efficiency + irradiance plot according to time
+        self.figure_eta, (self.ax_eta, self.ax_irr) = plt.subplots(nrows = 2)
+        self.lines_eta, = self.ax_eta.plot([],[], '-', color = 'blue')
+        self.ax_eta.set_xlim(0, self.minute * 60)
+        self.ax_eta.set_ylim(0, 1.1)
+        
+        self.ax_eta.set_xlabel('Time [s]')
+        self.ax_eta.set_ylabel('Eff [%]')
+        
+        
+        self.lines_irr, = self.ax_irr.plot([],[],'-',color = 'blue')
+        self.ax_irr.set_xlim(0, self.minute * 60)
+        self.ax_irr.set_ylim(0, 1200)
+        
+        self.ax_irr.set_xlabel('Time [s]')
+        self.ax_irr.set_ylabel('Irradiance [W/m2]')
+        plt.tight_layout()
+        
+    def on_running(self, xdata, ydata, Pdata, V_PV_array, I_PV_array,P_PV_array, eff_data, irr_data):
         
         ## Former points are plot
         if len(xdata)>1:
@@ -93,7 +114,7 @@ class DynamicUpdate:
             self.lines.set_ydata(ydata[:-1])
             self.lines_P.set_xdata(xdata[:-1])
             self.lines_P.set_ydata(Pdata[:-1])
-        
+            
         #Need both of these in order to rescale
         self.ax.relim()
         self.ax.autoscale_view()
@@ -129,10 +150,39 @@ class DynamicUpdate:
 
         self.lines_2_P, = self.ax_2_P.plot(V_PV_array, P_PV_array, '-', color = 'red')
         
+        
+        
+        ## 2nd figure --> Plot the Efficiency and the irradiance
+        ## Former points are plot
+        if len(eff_data)>1:
+            #Update data (with the new _and_ the old points)
+            self.lines_eta.set_xdata([i for i in range(len(eff_data[:-1]))])
+            self.lines_eta.set_ydata(eff_data[:-1])
+            self.lines_irr.set_xdata([i for i in range(len(irr_data[:-1]))])
+            self.lines_irr.set_ydata(irr_data[:-1])
+            
+        #Need both of these in order to rescale
+        self.ax_eta.relim()
+        self.ax_eta.autoscale_view()
+        self.ax_irr.relim()
+        self.ax_irr.autoscale_view()
+        
+        ## News points are plot as + marker
+        
+        self.newlines_eta, = self.ax_eta.plot([],[],'+',color = 'blue',markersize = 20)
+        self.newlines_irr, = self.ax_irr.plot([],[],'+', color = 'blue',markersize = 20)
+        
+        self.newlines_eta.set_xdata([len(eff_data)])
+        self.newlines_eta.set_ydata([eff_data[-1]])
+        self.newlines_irr.set_xdata([len(irr_data)])
+        self.newlines_irr.set_ydata([irr_data[-1]])
         # We need to draw *and* flush on second plot
         
         self.figure.canvas.draw()
         self.figure.canvas.flush_events()
+        
+        self.figure_eta.canvas.draw()
+        self.figure_eta.canvas.flush_events()
         
         # Following Indications on stackoverflow  --> remove former marker
         plt.pause(0.01)
@@ -145,8 +195,10 @@ class DynamicUpdate:
         
         self.newlines.remove()
         self.newlines_P.remove()
+        self.newlines_eta.remove()
+        self.newlines_irr.remove()
         
-    def add_point(self,x,y,V_PV_array,I_PV_array):
+    def add_point(self,x,y,V_PV_array,I_PV_array, P_PV_array, eff, irr):
         """
         Add point of coordinates (x,y) to the plot
         """
@@ -154,10 +206,9 @@ class DynamicUpdate:
         self.x_data.append(x)
         self.y_data.append(y)
         self.P_data.append(x*y)
-        P_PV_array = []
-        for k in range(len(V_PV_array)):
-            P_PV_array.append(V_PV_array[k] * I_PV_array[k])
+        self.eff_data.append(eff)
+        self.irr_data.append(irr)
         self.on_running(self.x_data, self.y_data,self.P_data,
-                        V_PV_array,I_PV_array,P_PV_array)
+                        V_PV_array,I_PV_array,P_PV_array, self.eff_data, self.irr_data)
         
         return self.x_data, self.y_data,self.P_data,P_PV_array

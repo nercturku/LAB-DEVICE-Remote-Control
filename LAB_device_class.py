@@ -324,6 +324,20 @@ class LD400P(Communication):
         I_lim = self.sendAndReceiveCommand("ILIM?")
         V_lim = self.sendAndReceiveCommand("VLIM?")
         return I_lim,V_lim
+    
+    def level_select(self, channel: str):
+        """
+        Change the channel of the LD400P
+        - channel: str,
+            'A': A
+            'B': B
+            'T': Transient
+            'V': Ext Voltage
+            'E': Ext TTL
+        """
+        self.sendCommand(f"LVLSEL {channel}")
+        chan = self.sendAndReceiveCommand("LVLSEL?")
+        return chan 
 
 if __name__ == '__main__':
     MX180TP_object = MX180TP()
