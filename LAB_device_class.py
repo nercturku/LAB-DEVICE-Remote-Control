@@ -253,7 +253,8 @@ class MX180TP(Communication):
         I_meas = self.sendAndReceiveCommand("I" + str(nb_output) + "O?")
         V_meas = float(V_meas[:5])
         I_meas = float(I_meas[:5])
-        return V_meas, I_meas
+        P_meas = V_meas * I_meas
+        return V_meas, I_meas, P_meas
 
 class LD400P(Communication):
     """ 
