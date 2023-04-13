@@ -71,14 +71,14 @@ class PV:
         """
 
         self.V_PV_array = np.linspace(0,self.V_oc,1000)
-        self.I_PV_array = (self.I_sc - self.I_0 * (np.exp(self.V_PV_array / (self.V_oc * self.C_AQ)) - 1)) - 0.01
+        self.I_PV_array = (self.I_sc - self.I_0 * (np.exp(self.V_PV_array / (self.V_oc * self.C_AQ)) - 1)) - 0.1
         self.P_PV_array = []
         for k in range(len(self.V_PV_array)):
             self.P_PV_array.append(self.V_PV_array[k] * self.I_PV_array[k])
     
     def supply_settings(self, I_load: float):
         """Gives the seetings for the power supply regarding the command given by the load"""
-        I_supply = I_load + 0.01
+        I_supply = I_load + 0.1
         V_supply = self.V_oc * self.C_AQ * np.log(1 + (self.I_sc - I_supply)/self.I_0)
 
         return V_supply, I_supply
